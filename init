@@ -12,6 +12,8 @@ LDAP_CLIENT_BASEDN="${LDAP_CLIENT_BASEDN:-ou=Clients,dc=example,dc=com}"
 
 LDAP_RADIUS_ACCESS_GROUP="${LDAP_RADIUS_ACCESS_GROUP:-}"
 RADIUS_CLIENT_CREDENTIALS="${RADIUS_CLIENT_CREDENTIALS:-}"
+RADIUS_EAP_PRIVATE_KEY="${RADIUS_EAP_PRIVATE_KEY:-}"
+RADIUS_EAP_CERTIFICATE="${RADIUS_EAP_CERTIFICATE:-}"
 
 # to turn on debugging, use "-x -f -l stdout"
 RADIUSD_ARGS="${RADIUSD_ARGS:--f -l stdout}"
@@ -90,6 +92,18 @@ client $CLIENT {
 }
 EOF
 done
+
+# run as root
+sed -i "s/user = .*$/user = root/" /etc/raddb/radiusd.conf
+sed -i "s/group = .*$/group = root/" /etc/raddb/radiusd.conf
+
+# use custom certs if exist
+if [[ -n "$RADIUS_EAP_PRIVATE_KEY" ]]; then
+    sed -i "s:private_key_file = .*$:private_key_file = ${RADIUS_EAP_PRIVATE_KEY}:" /etc/raddb/mods-enabled/eap
+fi
+if [[ -n "$RADIUS_EAP_CERTIFICATE" ]]; then
+    sed -i "s:certificate_file = .*$:certificate_file = ${RADIUS_EAP_CERTIFICATE}:" /etc/raddb/mods-enabled/eap
+fi
 
 # run radiusd
 exec /usr/bin/tini -- /usr/sbin/radiusd $RADIUSD_ARGS
